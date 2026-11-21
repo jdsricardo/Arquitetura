@@ -1,0 +1,51 @@
+Decisões de desenvolvimento
+
+Separei as rotas HTTP em server.py e as regras financeiras em ledger.py. Isso
+mantém as regras de movimentação independentes da interface. Mantive uma aplicação
+porque dividir essas regras em serviços acrescentaria chamadas de rede e mais
+pontos de falha na confirmação de uma operação.
+
+Escolhi SQLite e a biblioteca padrão do Python para facilitar a execução, sem
+instalar pacotes ou configurar outro serviço. A limitação é ter um único escritor
+por vez. Para várias instâncias e maior volume, usaria PostgreSQL com bloqueio por
+conta, replicação e backups com restauração testada.
+
+Os valores chegam como texto, são convertidos com Decimal e gravados em centavos
+inteiros para evitar erros de ponto flutuante. As duas casas decimais foram pensadas
+para BRL. Outras moedas e os limites de saldo precisam de validação própria.
+
+Calculo o saldo pelos lançamentos para não manter dois registros que possam divergir.
+A API só acrescenta movimentações; correções devem ser novos lançamentos. Isso
+preserva o histórico pela aplicação, mas não impede alterações diretas no arquivo.
+O modelo registra entradas e saídas, sem contabilidade de partidas dobradas.
+
+A consulta de saldo e o débito ficam na mesma transação, com BEGIN IMMEDIATE. Com
+R$ 100 na conta e dois débitos simultâneos de R$ 80, apenas um é aprovado. Adotei a
+regra de não permitir saldo negativo. Só devolvo sucesso após o commit; uma falha
+antes disso reverte a operação.
+
+Cada lançamento exige uma chave de idempotência, única por conta. Se a resposta se
+perder, repetir a chave com os mesmos dados recupera a operação original. Dados
+diferentes geram conflito. O cliente precisa guardar essa chave: no painel ela fica
+em memória e se perde ao recarregar a página. A criação de contas não é idempotente.
+
+O saldo histórico soma os lançamentos até o instante informado, com horários em
+UTC definidos pelo servidor. A data é atribuída antes do commit; não representa um
+fechamento contábil certificado. As consultas são por conta, sem agrupar várias
+contas de um cliente. O índice por conta e data ajuda a busca, mas históricos longos
+ainda tornam a soma mais cara.
+
+Ativei WAL para permitir leituras durante a escrita e synchronous=FULL para
+sincronizar a gravação antes de confirmar. Erros SQLite retornam 503; uma nova
+tentativa deve manter a chave original. Para picos de demanda, colocaria limites de
+requisições e mediria espera por bloqueios. Filas ficariam para notificações e
+relatórios; confirmar dinheiro continuaria dependendo do banco. Não há failover.
+
+A API usa SQL parametrizado, limita o corpo JSON e desabilita cache nas respostas.
+Ela escuta apenas no endereço local e ainda não tem autenticação. Para expor o
+serviço, seriam necessários autorização por conta, TLS, criptografia dos discos e
+backups e auditoria de acesso, evitando dados pessoais em descrições e logs.
+
+Na operação, acompanharia latência, erros e bloqueios. O /health só verifica o HTTP.
+Backups precisam considerar o WAL, e mudanças nas tabelas precisam de migrações
+versionadas; criar as tabelas na inicialização não atualiza um banco existente.

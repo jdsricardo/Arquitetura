@@ -1,0 +1,593 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f7fb">
+  <title>Conta Clara — Ledger financeiro</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17233b;
+      --muted: #748099;
+      --line: #e8ecf3;
+      --paper: #fff;
+      --canvas: #f5f7fb;
+      --navy: #172b4d;
+      --blue: #4667e8;
+      --mint: #dff7ef;
+      --green: #118566;
+      --red: #bd4b57;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      color: var(--ink);
+      background:
+        radial-gradient(ellipse at 82% 0%, rgba(218, 228, 255, .62), transparent 34rem),
+        var(--canvas);
+    }
+
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+
+    .shell { width: min(1120px, calc(100% - 40px)); margin: 0 auto; }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 82px;
+      border-bottom: 1px solid rgba(220, 226, 238, .8);
+    }
+
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-mark {
+      display: grid;
+      width: 40px;
+      height: 40px;
+      place-items: center;
+      color: white;
+      background: var(--navy);
+      border-radius: 13px;
+      box-shadow: 0 7px 16px rgba(23, 43, 77, .16);
+    }
+    .brand-name { font-size: 15px; font-weight: 760; letter-spacing: -.3px; }
+    .brand-caption { margin-top: 2px; color: var(--muted); font-size: 11px; }
+    .environment {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 13px;
+      color: #53617b;
+      background: rgba(255,255,255,.78);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 650;
+    }
+    .environment-dot { width: 7px; height: 7px; background: #35b68c; border-radius: 50%; }
+
+    main { padding: 38px 0 56px; }
+    .intro { margin-bottom: 25px; }
+    .eyebrow {
+      margin: 0 0 9px;
+      color: var(--blue);
+      font-size: 11px;
+      font-weight: 750;
+      letter-spacing: 1.45px;
+      text-transform: uppercase;
+    }
+    h1 { margin: 0; font-size: clamp(27px, 4vw, 37px); letter-spacing: -1.5px; line-height: 1.15; }
+    .intro-copy { margin: 10px 0 0; color: var(--muted); font-size: 14px; }
+
+    .notice {
+      display: none;
+      margin: 0 0 18px;
+      padding: 13px 15px;
+      border: 1px solid transparent;
+      border-radius: 12px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .notice.visible { display: block; }
+    .notice.error { color: #943d48; background: #fff0f1; border-color: #f5dadd; }
+    .notice.success { color: #17694f; background: #eaf8f2; border-color: #d4eee3; }
+
+    .dashboard {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(320px, .85fr);
+      gap: 18px;
+      align-items: start;
+    }
+    .column { display: grid; gap: 18px; }
+    .card {
+      padding: 23px;
+      background: rgba(255,255,255,.94);
+      border: 1px solid rgba(228, 233, 242, .95);
+      border-radius: 18px;
+      box-shadow: 0 8px 26px rgba(30, 48, 82, .045);
+    }
+    .card-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+    .card-title { margin: 0; font-size: 15px; font-weight: 730; letter-spacing: -.25px; }
+    .card-subtitle { margin: 5px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .step {
+      display: grid;
+      width: 29px;
+      height: 29px;
+      place-items: center;
+      flex: 0 0 auto;
+      color: #66738d;
+      background: #f1f4f9;
+      border-radius: 9px;
+      font-size: 12px;
+      font-weight: 750;
+    }
+
+    .field { display: grid; gap: 7px; }
+    .field label { color: #56627a; font-size: 11px; font-weight: 700; }
+    .field input, .field select {
+      width: 100%;
+      height: 43px;
+      padding: 0 12px;
+      color: var(--ink);
+      background: #fff;
+      border: 1px solid #dfe5ef;
+      border-radius: 10px;
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .field input:focus, .field select:focus {
+      border-color: #8195ee;
+      box-shadow: 0 0 0 3px rgba(70, 103, 232, .11);
+    }
+    .field input::placeholder { color: #a4adbd; }
+    .account-create { display: grid; grid-template-columns: minmax(0, 1fr) 105px; gap: 11px; margin-top: 20px; }
+    .account-id-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 9px; margin-top: 15px; }
+
+    .button {
+      display: inline-flex;
+      height: 43px;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 0 15px;
+      color: white;
+      background: var(--navy);
+      border: 1px solid var(--navy);
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 720;
+      transition: transform .12s, background .12s, box-shadow .12s;
+    }
+    .button:hover { background: #223b65; box-shadow: 0 5px 13px rgba(23,43,77,.14); transform: translateY(-1px); }
+    .button:disabled { cursor: wait; opacity: .65; transform: none; }
+    .button.secondary { color: #4c5b75; background: #fff; border-color: var(--line); }
+    .button.secondary:hover { background: #f8f9fc; box-shadow: none; }
+    .button.full { width: 100%; margin-top: 16px; }
+    .tiny-note { margin: 11px 0 0; color: #8993a6; font-size: 11px; line-height: 1.5; }
+
+    .balance-card {
+      position: relative;
+      overflow: hidden;
+      min-height: 204px;
+      padding: 24px;
+      color: white;
+      background: linear-gradient(135deg, #1a3157, #253f70 68%, #344d83);
+      border: 0;
+      box-shadow: 0 14px 28px rgba(29, 52, 91, .17);
+    }
+    .balance-card::after {
+      position: absolute;
+      top: -82px;
+      right: -48px;
+      width: 230px;
+      height: 230px;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 50%;
+      box-shadow: 0 0 0 25px rgba(255,255,255,.035), 0 0 0 55px rgba(255,255,255,.025);
+      content: "";
+      pointer-events: none;
+    }
+    .balance-card .card-title { color: rgba(255,255,255,.86); }
+    .balance-card .card-subtitle { color: rgba(255,255,255,.61); }
+    .balance-amount { position: relative; z-index: 1; margin: 28px 0 7px; font-size: clamp(31px, 4vw, 40px); font-weight: 740; letter-spacing: -1.6px; }
+    .balance-meta { position: relative; z-index: 1; color: rgba(255,255,255,.64); font-size: 11px; }
+    .balance-tools { position: relative; z-index: 1; display: flex; align-items: end; gap: 9px; margin-top: 20px; }
+    .balance-tools .field { flex: 1; }
+    .balance-tools label { color: rgba(255,255,255,.71); }
+    .balance-tools input { height: 37px; color: white; color-scheme: dark; background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.2); }
+    .balance-tools .button { height: 37px; color: var(--navy); background: white; border-color: white; }
+    .balance-tools .button:hover { background: #eff3ff; }
+
+    .movement-form { display: grid; gap: 13px; margin-top: 20px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
+    .empty-state {
+      display: grid;
+      min-height: 116px;
+      place-items: center;
+      margin-top: 16px;
+      padding: 18px;
+      color: #8792a6;
+      background: #f8f9fc;
+      border: 1px dashed #dfe5ef;
+      border-radius: 12px;
+      font-size: 12px;
+      text-align: center;
+      line-height: 1.6;
+    }
+    .receipt { display: none; margin-top: 16px; padding: 14px; background: #f7f9fc; border-radius: 12px; }
+    .receipt.visible { display: block; }
+    .receipt-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .receipt-label { color: var(--muted); font-size: 11px; }
+    .receipt-amount { font-size: 16px; font-weight: 760; }
+    .receipt-amount.credit { color: var(--green); }
+    .receipt-amount.debit { color: var(--red); }
+    .receipt-detail { margin-top: 7px; color: #7d8799; font-size: 11px; }
+
+    footer { padding: 18px 0 0; color: #8993a6; font-size: 11px; text-align: center; }
+
+    @media (max-width: 760px) {
+      .shell { width: min(100% - 28px, 560px); }
+      header { height: 70px; }
+      main { padding-top: 29px; }
+      .dashboard { grid-template-columns: 1fr; }
+      .card { padding: 20px; }
+      .environment { padding: 8px 10px; font-size: 10px; }
+    }
+    @media (max-width: 420px) {
+      .account-create { grid-template-columns: 1fr 88px; }
+      .account-id-row { grid-template-columns: 1fr; }
+      .account-id-row .button { width: 100%; }
+      .balance-tools { align-items: stretch; flex-direction: column; }
+      .balance-tools .button { width: 100%; }
+      .form-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+            <path d="M4 8.5 12 4l8 4.5v7L12 20l-8-4.5v-7Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+            <path d="m8 12 2.5 2.5L16.5 9" stroke="#8FE0C5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div>
+          <div class="brand-name">Conta Clara</div>
+          <div class="brand-caption">Ledger financeiro</div>
+        </div>
+      </div>
+      <div class="environment"><span class="environment-dot"></span> Ambiente local</div>
+    </header>
+
+    <main>
+      <section class="intro">
+        <p class="eyebrow">Painel de demonstração</p>
+        <h1>Movimentações, com clareza.</h1>
+        <p class="intro-copy">Crie uma conta, registre lançamentos e acompanhe o saldo em um só lugar.</p>
+      </section>
+
+      <div id="notice" class="notice" role="status" aria-live="polite"></div>
+
+      <div class="dashboard">
+        <div class="column">
+          <section class="card">
+            <div class="card-heading">
+              <div>
+                <h2 class="card-title">Sua conta</h2>
+                <p class="card-subtitle">Crie uma conta para começar ou carregue uma conta existente.</p>
+              </div>
+              <span class="step">01</span>
+            </div>
+            <form id="account-form" class="account-create">
+              <div class="field">
+                <label for="customer-id">Identificação do cliente</label>
+                <input id="customer-id" name="customer_id" maxlength="128" placeholder="Ex.: cliente-001" required>
+              </div>
+              <button class="button" type="submit">Criar conta</button>
+            </form>
+            <div class="account-id-row">
+              <div class="field">
+                <label for="account-id">ID da conta ativa</label>
+                <input id="account-id" autocomplete="off" placeholder="O ID aparecerá aqui após criar a conta">
+              </div>
+              <button id="load-account" class="button secondary" type="button">Carregar conta</button>
+            </div>
+            <p class="tiny-note">O ID da conta fica salvo neste navegador para facilitar a próxima visita.</p>
+          </section>
+
+          <section class="card">
+            <div class="card-heading">
+              <div>
+                <h2 class="card-title">Novo lançamento</h2>
+                <p class="card-subtitle">Valores são registrados em centavos, sem arredondamento.</p>
+              </div>
+              <span class="step">02</span>
+            </div>
+            <form id="transaction-form" class="movement-form">
+              <div class="form-row">
+                <div class="field">
+                  <label for="direction">Tipo de movimentação</label>
+                  <select id="direction" name="direction">
+                    <option value="credit">Crédito — entrada</option>
+                    <option value="debit">Débito — saída</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="amount">Valor (R$)</label>
+                  <input id="amount" name="amount" type="number" min="0.01" step="0.01" placeholder="0,00" required>
+                </div>
+              </div>
+              <div class="field">
+                <label for="description">Descrição</label>
+                <input id="description" name="description" maxlength="280" placeholder="Ex.: depósito, pagamento...">
+              </div>
+              <button id="submit-transaction" class="button full" type="submit">Registrar movimentação</button>
+            </form>
+            <div id="empty-receipt" class="empty-state">Seus lançamentos aparecerão aqui após o primeiro registro.</div>
+            <div id="receipt" class="receipt" aria-live="polite">
+              <div class="receipt-top">
+                <span id="receipt-label" class="receipt-label">Movimentação registrada</span>
+                <span id="receipt-amount" class="receipt-amount"></span>
+              </div>
+              <div id="receipt-detail" class="receipt-detail"></div>
+            </div>
+          </section>
+        </div>
+
+        <div class="column">
+          <section class="card balance-card">
+            <div class="card-heading">
+              <div>
+                <h2 class="card-title">Saldo consolidado</h2>
+                <p id="balance-caption" class="card-subtitle">Crie ou carregue uma conta para consultar.</p>
+              </div>
+              <span class="step">03</span>
+            </div>
+            <div id="balance-amount" class="balance-amount">R$ 0,00</div>
+            <div id="balance-meta" class="balance-meta">Aguardando uma conta</div>
+            <div class="balance-tools">
+              <div class="field">
+                <label for="as-of">Posição em uma data (opcional)</label>
+                <input id="as-of" type="datetime-local">
+              </div>
+              <button id="refresh-balance" class="button" type="button">Consultar saldo</button>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="card-heading">
+              <div>
+                <h2 class="card-title">Como funciona</h2>
+                <p class="card-subtitle">Uma demonstração local do livro-razão.</p>
+              </div>
+            </div>
+            <div style="display:grid;gap:14px;margin-top:19px">
+              <div style="display:flex;gap:11px;align-items:flex-start">
+                <span class="step">1</span><p style="margin:3px 0 0;color:#68758d;font-size:12px;line-height:1.55">Cada crédito ou débito é salvo como um lançamento permanente.</p>
+              </div>
+              <div style="display:flex;gap:11px;align-items:flex-start">
+                <span class="step">2</span><p style="margin:3px 0 0;color:#68758d;font-size:12px;line-height:1.55">O saldo é calculado a partir dos lançamentos da conta.</p>
+              </div>
+              <div style="display:flex;gap:11px;align-items:flex-start">
+                <span class="step">3</span><p style="margin:3px 0 0;color:#68758d;font-size:12px;line-height:1.55">Débitos acima do saldo disponível são recusados.</p>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+      <footer>Projeto demonstrativo • Python + SQLite • Dados armazenados localmente</footer>
+    </main>
+  </div>
+
+  <script>
+    "use strict";
+
+    const accountInput = document.getElementById("account-id");
+    const notice = document.getElementById("notice");
+    const balanceAmount = document.getElementById("balance-amount");
+    const balanceMeta = document.getElementById("balance-meta");
+    const balanceCaption = document.getElementById("balance-caption");
+    const storageKey = "conta-clara-account-id";
+    let pendingTransaction = null;
+
+    function showNotice(message, type) {
+      notice.textContent = message;
+      notice.className = "notice visible " + type;
+    }
+
+    function clearNotice() {
+      notice.textContent = "";
+      notice.className = "notice";
+    }
+
+    async function requestJson(url, options) {
+      let response;
+      try {
+        response = await fetch(url, options);
+      } catch {
+        throw new Error("Não foi possível conectar à API. Confira se o servidor está rodando em 127.0.0.1:8000.");
+      }
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || "A solicitação falhou (" + response.status + ").");
+      }
+      return payload;
+    }
+
+    function activeAccountId() {
+      const id = accountInput.value.trim();
+      if (!id) {
+        throw new Error("Crie uma conta ou informe o ID de uma conta existente.");
+      }
+      return id;
+    }
+
+    function currencyText(cents, currency) {
+      return new Intl.NumberFormat("pt-BR", {
+        style: "currency",
+        currency: currency || "BRL"
+      }).format(cents / 100);
+    }
+
+    function saveAccount(id) {
+      accountInput.value = id;
+      localStorage.setItem(storageKey, id);
+    }
+
+    async function refreshBalance() {
+      clearNotice();
+      const id = activeAccountId();
+      const asOfInput = document.getElementById("as-of");
+      const asOf = asOfInput.value;
+      if (asOf && new Date(asOf).getTime() > Date.now()) {
+        throw new Error("A data e hora da consulta não podem estar no futuro.");
+      }
+      const query = asOf ? "?at=" + encodeURIComponent(new Date(asOf).toISOString()) : "";
+      const data = await requestJson(
+        "/accounts/" + encodeURIComponent(id) + "/balance" + query
+      );
+      balanceAmount.textContent = currencyText(data.balance_cents, data.currency);
+      balanceCaption.textContent = asOf
+        ? "Posição em " + new Date(data.as_of).toLocaleString("pt-BR")
+        : "Saldo atual";
+      balanceMeta.textContent = "Conta " + data.account_id.slice(0, 8) +
+        "… • consulta realizada em " + new Date(data.consulted_at).toLocaleString("pt-BR");
+    }
+
+    document.getElementById("account-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      clearNotice();
+      const button = event.currentTarget.querySelector("button[type=submit]");
+      button.disabled = true;
+      let accountCreated = false;
+      try {
+        const customerId = document.getElementById("customer-id").value.trim();
+        const account = await requestJson("/accounts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ customer_id: customerId, currency: "BRL" })
+        });
+        saveAccount(account.id);
+        accountCreated = true;
+        document.getElementById("as-of").value = "";
+        await refreshBalance();
+        showNotice("Conta criada e pronta para receber lançamentos.", "success");
+      } catch (error) {
+        showNotice(
+          accountCreated
+            ? "Conta criada, mas não foi possível consultar o saldo: " + error.message
+            : error.message,
+          "error"
+        );
+      } finally {
+        button.disabled = false;
+      }
+    });
+
+    document.getElementById("load-account").addEventListener("click", async () => {
+      try {
+        saveAccount(activeAccountId());
+        document.getElementById("as-of").value = "";
+        await refreshBalance();
+        showNotice("Conta carregada com sucesso.", "success");
+      } catch (error) {
+        showNotice(error.message, "error");
+      }
+    });
+
+    document.getElementById("refresh-balance").addEventListener("click", async () => {
+      try {
+        await refreshBalance();
+        showNotice("Saldo consultado com sucesso.", "success");
+      } catch (error) {
+        showNotice(error.message, "error");
+      }
+    });
+
+    document.getElementById("transaction-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      clearNotice();
+      const button = document.getElementById("submit-transaction");
+      button.disabled = true;
+      try {
+        const id = activeAccountId();
+        const direction = document.getElementById("direction").value;
+        const amount = document.getElementById("amount").value;
+        const description = document.getElementById("description").value.trim();
+        const requestBody = { direction, amount, description };
+        const fingerprint = JSON.stringify(requestBody);
+        if (!pendingTransaction || pendingTransaction.fingerprint !== fingerprint) {
+          pendingTransaction = {
+            fingerprint,
+            key: crypto.randomUUID
+              ? crypto.randomUUID()
+              : Date.now().toString(36) + Math.random().toString(36).slice(2)
+          };
+        }
+        const transaction = await requestJson(
+          "/accounts/" + encodeURIComponent(id) + "/transactions",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Idempotency-Key": pendingTransaction.key
+            },
+            body: fingerprint
+          }
+        );
+        pendingTransaction = null;
+        document.getElementById("empty-receipt").style.display = "none";
+        const receiptAmount = document.getElementById("receipt-amount");
+        receiptAmount.textContent = (transaction.amount_cents > 0 ? "+" : "−") +
+          currencyText(Math.abs(transaction.amount_cents), transaction.currency);
+        receiptAmount.className = "receipt-amount " + direction;
+        document.getElementById("receipt-label").textContent =
+          direction === "credit" ? "Crédito registrado" : "Débito registrado";
+        document.getElementById("receipt-detail").textContent =
+          (transaction.description || "Sem descrição") + " • " +
+          new Date(transaction.created_at).toLocaleString("pt-BR");
+        document.getElementById("receipt").classList.add("visible");
+        document.getElementById("transaction-form").reset();
+        document.getElementById("direction").value = direction;
+        document.getElementById("as-of").value = "";
+        try {
+          await refreshBalance();
+          showNotice("Movimentação registrada com sucesso.", "success");
+        } catch (error) {
+          showNotice(
+            "Movimentação registrada, mas não foi possível atualizar o saldo: " + error.message,
+            "error"
+          );
+        }
+      } catch (error) {
+        showNotice(error.message, "error");
+      } finally {
+        button.disabled = false;
+      }
+    });
+
+    const savedAccount = localStorage.getItem(storageKey);
+    const asOfInput = document.getElementById("as-of");
+    function updateAsOfLimit() {
+      const now = new Date();
+      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+      asOfInput.max = now.toISOString().slice(0, 16);
+    }
+    updateAsOfLimit();
+    window.setInterval(updateAsOfLimit, 30000);
+
+    if (savedAccount) {
+      accountInput.value = savedAccount;
+      refreshBalance().catch((error) => showNotice(error.message, "error"));
+    }
+  </script>
+</body>
+</html>
